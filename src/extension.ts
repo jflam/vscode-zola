@@ -17,7 +17,27 @@ export function activate(context: vscode.ExtensionContext) {
 	console.log('vscode-zola activated');
 
 	let pasteSpecial = vscode.commands.registerCommand('vscode-zola.pasteSpecial', () => {
-		vscode.window.showInformationMessage('TODO: paste stuff');
+		// Paste a hard-coded string into the active editor
+		const editor = vscode.window.activeTextEditor;
+		if (editor) {
+			const doc = editor.document;
+			const text = "{{ youtube(id='V7707zEX9X4')}}";
+
+			// Insert text into the document
+			editor.edit(editBuilder => {
+				if (editor.selection.isEmpty) {
+					// Insert at current cursor location
+					editBuilder.insert(editor.selection.active, text);
+				} else {
+					// Replace current selection(s). It's pretty cool that
+					// this will do multi-selection replace!
+					editor.selections.forEach(sel => {
+						const range = sel.isEmpty ? doc.getWordRangeAtPosition(sel.start) || sel : sel;
+						editBuilder.replace(range, text);
+					});
+				}
+			});
+		}
 	});
 
 	let previewBlog = vscode.commands.registerCommand('vscode-zola.previewBlog', () => {
