@@ -10,6 +10,8 @@ function getDocumentWorkspaceFolder(): string | undefined {
 	  .filter((fsPath) => fileName?.startsWith(fsPath))[0];
 }
 
+// Insert text into the active editor window, either replacing current 
+// selection or inserting at current cursor position of no selection
 function insertIntoActiveEditor(text: string) {
 	const editor = vscode.window.activeTextEditor;
 	if (editor) {
