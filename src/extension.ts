@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 const { exec } = require('child_process');
 
+// Helper function that extracts the directory name of the file that is open
+// in the currently active editor
 function getDocumentWorkspaceFolder(): string | undefined {
 	const fileName = vscode.window.activeTextEditor?.document.fileName;
 	return vscode.workspace.workspaceFolders
