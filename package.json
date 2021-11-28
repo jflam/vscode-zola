@@ -10,7 +10,7 @@
 		"Other"
 	],
 	"activationEvents": [
-        "onCommand:vscode-zola.pasteSpecial"
+		"workspaceContains:/config.toml"
 	],
 	"main": "./out/extension.js",
 	"contributes": {

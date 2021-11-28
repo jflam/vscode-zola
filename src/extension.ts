@@ -8,6 +8,8 @@ function getDocumentWorkspaceFolder(): string | undefined {
 	  .filter((fsPath) => fileName?.startsWith(fsPath))[0];
 }
 
+// The activation function is activated when VS Code opens a workspace that
+// contains a config.toml file in the root directory of the workspace
 export function activate(context: vscode.ExtensionContext) {
 	
 	console.log('vscode-zola activated');
