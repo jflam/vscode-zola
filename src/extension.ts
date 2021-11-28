@@ -32,16 +32,69 @@ function insertIntoActiveEditor(text: string) {
 	}
 }
 
+function getTextClipboardData(callback: (text: string) => void) {
+
+	// Use the built-in clipboard to read the contents of the clipboard Other
+	// extensions, e.g., vscode-paste-special have a switch that invokes
+	// different system utilities, e.g., winclip.exe or gtkclip, but I wonder
+	// if this is necessary today? I'll need to test to make sure, but it
+	// would be really nice if I could simplify things here.
+	vscode.env.clipboard.readText().then((text) => {
+		callback(text);
+	});
+}
+
 // The activation function is activated when VS Code opens a workspace that
 // contains a config.toml file in the root directory of the workspace
 export function activate(context: vscode.ExtensionContext) {
 	
 	console.log('vscode-zola activated');
 
+	// The Paste Special examines URIs on the clipboard and converts matching
+	// URIs into special short codes that can be used to generate special
+	// formatting for sites like YouTube and Twitter.
 	let pasteSpecial = vscode.commands.registerCommand('vscode-zola.pasteSpecial', () => {
-		// Paste a hard-coded string into the active editor
-		const text = "{{ youtube(id='V7707zEX9X4')}}";
-		insertIntoActiveEditor(text);
+		// Regular expressions for extracting IDs out of commonly copied URIs:
+
+		// https://www.youtube.com/watch?v=rgHEmK2mE7Q => rgHEmK2mE7Q  
+		const regexpYouTube = /youtube.com\/watch\?v=(.*)/g;
+
+		// https://twitter.com/ckindel/status/1462284494258405384 => 1462284494258405384 
+		const regexpTwitter = /twitter.com\/(.*)\/status\/(.*)/g;
+
+		// https://www.instagram.com/p/CW1JQJ1Paul/ => CW1JQJ1Paul
+		const regexpInstagram = /instagram.com\/p\/(.*)\/.*/g;
+
+		getTextClipboardData((text) => {
+			// Front-end filter for all URIs before looking for specialized ones
+			const regexpUri = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
+			var m0 = regexpUri.exec(text);
+			if (m0 !== null) {
+				var m1 = regexpYouTube.exec(text);
+				if (m1 !== null) {
+					var id = m1[1];
+					insertIntoActiveEditor(`{{ youtube(id="${id}")}}`);
+					return;
+				}
+
+				var m2 = regexpTwitter.exec(text);
+				if (m2 !== null) {
+					var id = m2[2];
+					insertIntoActiveEditor(`{{ twitter(id="${id}")}}`);
+					return;
+				}
+
+				var m3 = regexpInstagram.exec(text);
+				if (m3 !== null) {
+					var id = m3[1];
+					insertIntoActiveEditor(`{{ instagram(id="${id}")}}`);
+					return;
+				}
+			}
+
+			// Otherwise just paste contents of clipboard into editor
+			insertIntoActiveEditor(text);
+		});
 	});
 
 	let previewBlog = vscode.commands.registerCommand('vscode-zola.previewBlog', () => {
