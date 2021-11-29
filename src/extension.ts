@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-const { exec } = require('child_process');
+import * as fs from 'fs';
 
 // Helper function that extracts the directory name of the file that is open
 // in the currently active editor
@@ -135,8 +135,37 @@ export function activate(context: vscode.ExtensionContext) {
 		`;
 	});
 
+	// Create a new blog post by taking today's date and creating a new 
+	// directory content/yyyy-mm-dd/ and a new file index.md in that directory
+	let newPost = vscode.commands.registerCommand('vscode-zola.newPost', async () => {
+		const date = new Date().toISOString().split('T')[0];
+
+		const blogDir = vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath)[0];
+		if (blogDir) {
+			const newDir = `${blogDir}/content/${date}`;
+			const newFile = `${newDir}/index.md`;
+			if (!fs.existsSync(newDir)) {
+				fs.mkdirSync(newDir);
+			}
+			if (!fs.existsSync(newFile)) {
+				fs.writeFileSync(newFile, `
++++
+title="${date}"
+date=${date}
++++
+`);
+			}
+
+			// Open the index.md file (newFile) in editor
+			const uri = vscode.Uri.parse(`file://${newFile}`);
+			const doc = await vscode.workspace.openTextDocument(uri);
+			vscode.window.showTextDocument(doc);
+		}
+	});
+
 	context.subscriptions.push(pasteSpecial);
 	context.subscriptions.push(previewBlog);
+	context.subscriptions.push(newPost);
 }
 
 // this method is called when your extension is deactivated

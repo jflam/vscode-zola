@@ -16,6 +16,10 @@
 	"contributes": {
 		"commands": [
 			{
+				"command": "vscode-zola.newPost",
+				"title": "Zola: New Post"
+			},
+			{
 				"command": "vscode-zola.pasteSpecial",
 				"title": "Zola: Paste Special"
 			},
