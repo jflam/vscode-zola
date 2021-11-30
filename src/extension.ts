@@ -138,7 +138,10 @@ export function activate(context: vscode.ExtensionContext) {
 	// Create a new blog post by taking today's date and creating a new 
 	// directory content/yyyy-mm-dd/ and a new file index.md in that directory
 	let newPost = vscode.commands.registerCommand('vscode-zola.newPost', async () => {
-		const date = new Date().toISOString().split('T')[0];
+		const currentDate = new Date();
+		const offset = currentDate.getTimezoneOffset();
+		const localDate = new Date(currentDate.getTime() - (offset * 60 * 1000));
+		const date = localDate.toISOString().split('T')[0];
 
 		const blogDir = vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath)[0];
 		if (blogDir) {
