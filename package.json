@@ -16,6 +16,10 @@
 	"contributes": {
 		"commands": [
 			{
+				"command": "vscode-zola.bs",
+				"title": "Zola: Block Selection"
+			},
+			{
 				"command": "vscode-zola.newPost",
 				"title": "Zola: New Post"
 			},
