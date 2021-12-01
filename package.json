@@ -16,12 +16,12 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "vscode-zola.bs",
+				"command": "vscode-zola.blockSelection",
 				"title": "Zola: Block Selection"
 			},
 			{
-				"command": "vscode-zola.newPost",
-				"title": "Zola: New Post"
+				"command": "vscode-zola.openTodayPost",
+				"title": "Zola: Open Today's Post"
 			},
 			{
 				"command": "vscode-zola.pasteSpecial",
