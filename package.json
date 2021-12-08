@@ -3,6 +3,7 @@
 	"displayName": "vscode-zola",
 	"description": "VS Code extensions for writing a blog using zola",
 	"version": "0.0.1",
+	"repository": { "url": "https://github.com/jflam/vscode-zola" },
 	"engines": {
 		"vscode": "^1.62.0"
 	},

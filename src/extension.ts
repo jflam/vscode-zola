@@ -170,7 +170,10 @@ export function activate(context: vscode.ExtensionContext) {
 			zolaPreview = vscode.window.createWebviewPanel(
 				'vscode-zola.preview',
 				'Zola Preview',
-				vscode.ViewColumn.Beside
+				vscode.ViewColumn.Beside,
+				{
+					enableScripts: true
+				}
 			);
 		}
 
@@ -199,12 +202,14 @@ export function activate(context: vscode.ExtensionContext) {
 		var relativeFileDir = getRelativePathToZolaFile(folderPath, currentEditorPath);
 		var uri = `http://localhost:1111${relativeFileDir}`;
 		zolaPreview.webview.html = getZolaContent(uri);
+		zolaOutput.appendLine(`Open zola preview: ${uri}`);
 
 		// Now watch for changes to currentEditorPath and update if that changes
 		// Note the polling interval is 500ms
 		fs.watchFile(currentEditorPath, { interval: 500 }, (curr, prev) => {
 			if (path.extname(currentEditorPath) === ".md") {
 				zolaPreview.webview.html = getZolaContent(uri);
+				zolaOutput.appendLine(`Re-render zola post: ${uri}`);
 			}
 		});
 	});
@@ -279,6 +284,7 @@ date=${date}
 			var relativeFileDir = getRelativePathToZolaFile(folderPath, editorPath);
 			var uri = `http://localhost:1111${relativeFileDir}`;
 			zolaPreview.webview.html = getZolaContent(uri);
+			zolaOutput.appendLine(`Editor changed to: ${uri}`);
 		}
 	});
 
