@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import * as path from 'path';
 
 // Helper function that extracts the directory name of the file that is open
 // in the currently active editor
@@ -32,6 +33,33 @@ function insertIntoActiveEditor(text: string) {
 	}
 }
 
+function getZolaContent(uri: string) {
+	return `
+<html lang="en"">
+<head>
+	<meta charset="UTF-8">
+	<title>Preview</title>
+	<style>
+		html { width: 100%; height: 100%; min-height: 100%; display: flex; }
+		body { flex: 1; display: flex; }
+		iframe { flex: 1; border: none; background: white; }
+	</style>
+</head>
+<body>
+	<iframe src="${uri}"></iframe>
+	<!-- HACK to generate unique HTML each time called ${Math.random()} -->
+</body>
+</html>
+`;
+}
+
+function getRelativePathToZolaFile(workspacePath: string, editorPath: string) {
+	var contentDir = workspacePath + "/content";
+	var currentFileDir = path.dirname(editorPath);
+	var relativeFileDir = currentFileDir.replace(contentDir, "");
+	return relativeFileDir;
+}
+
 function getTextClipboardData(callback: (text: string) => void) {
 
 	// Use the built-in clipboard to read the contents of the clipboard Other
@@ -49,6 +77,10 @@ function getTextClipboardData(callback: (text: string) => void) {
 export function activate(context: vscode.ExtensionContext) {
 	
 	console.log('vscode-zola activated');
+
+	let zolaPreview: vscode.WebviewPanel;
+	let zolaOutput: vscode.OutputChannel;
+	let zolaTerminal: vscode.Terminal;
 
 	// The Paste Special examines URIs on the clipboard and converts matching
 	// URIs into special short codes that can be used to generate special
@@ -99,40 +131,82 @@ export function activate(context: vscode.ExtensionContext) {
 
 	let previewBlog = vscode.commands.registerCommand('vscode-zola.previewBlog', () => {
 
-		// TODO: some kind of intelligent flow control to test of process
-		// is running already?
-		const terminal = vscode.window.createTerminal(
-			`zola serve`);
+		// If zolaPreview is defined then exit - the preview window has 
+		// already been created
+		if (zolaPreview !== undefined) {
+			return;
+		}
+
+		// If the current editor is undefined, then exit
+		const currentEditorPath = vscode.window.activeTextEditor?.document.fileName;
+		if (currentEditorPath === undefined) {
+			return;
+		}
+
+		// If the current editor isn't editing a markdown file then exit
+		if (path.extname(currentEditorPath) !== ".md") {
+			return;
+		}
+
+		// Retrieve the workspaceFolder which I'm assuming here is the 
+		// directory that contains the zola blog (I could be wrong too ...)
 		const folderPath = getDocumentWorkspaceFolder();
-		console.log(folderPath);
-		if (folderPath !== undefined) {
-			terminal.sendText(`cd ${folderPath}`);
-			terminal.sendText(`zola serve`);
+		if (folderPath === undefined) {
+			return;
+		}
+
+		// The package of zolaOutput, zolaPreview and zolaTerminal are all
+		// together - but keeping guards here for the creation just in case
+		// Create all three of these now
+
+		// I'm not entirely sure we need this window, but keeping this for 
+		// all of our debug output for now
+		if (zolaOutput === undefined) {
+			zolaOutput = vscode.window.createOutputChannel("zola");
 		}
 
 		// Create a webview panel to the right of the current editor
-		const panel = vscode.window.createWebviewPanel(
-			'vscode-zola.preview',
-			'Zola Preview',
-			vscode.ViewColumn.Beside
-		);
-		// Inject an IFRAME into the panel that retrieves zola preview
-		panel.webview.html = `
-		<html lang="en"">
-		<head>
-			<meta charset="UTF-8">
-			<title>Preview</title>
-			<style>
-				html { width: 100%; height: 100%; min-height: 100%; display: flex; }
-				body { flex: 1; display: flex; }
-				iframe { flex: 1; border: none; background: white; }
-			</style>
-		</head>
-		<body>
-			<iframe src="http://localhost:1111"></iframe>
-		</body>
-		</html>
-		`;
+		if (zolaPreview === undefined) {
+			zolaPreview = vscode.window.createWebviewPanel(
+				'vscode-zola.preview',
+				'Zola Preview',
+				vscode.ViewColumn.Beside
+			);
+		}
+
+		// Output of the zola serve command will go to this window
+		if (zolaTerminal === undefined) {
+			zolaTerminal = vscode.window.createTerminal(`zola serve`);
+		}
+
+		// A good user experience is that if we encounter an error in Zola
+		// during startup that we pop
+
+		// Another good user experience is that if we run into a problem 
+		// with rendering that we do something in the generated HTML to pop
+		// a banner at the top in red to indicate that there is a problem
+		// that should be doable since I control the HTML in the web view
+
+		// TODO: understand lifetime management for extensions to know when
+		// to output the shutting down zola message
+		zolaOutput.appendLine(`Starting zola in ${folderPath}...`);
+
+		if (folderPath !== undefined) {
+			zolaTerminal.sendText(`cd ${folderPath}`);
+			zolaTerminal.sendText(`zola serve`);
+		}
+
+		var relativeFileDir = getRelativePathToZolaFile(folderPath, currentEditorPath);
+		var uri = `http://localhost:1111${relativeFileDir}`;
+		zolaPreview.webview.html = getZolaContent(uri);
+
+		// Now watch for changes to currentEditorPath and update if that changes
+		// Note the polling interval is 500ms
+		fs.watchFile(currentEditorPath, { interval: 500 }, (curr, prev) => {
+			if (path.extname(currentEditorPath) === ".md") {
+				zolaPreview.webview.html = getZolaContent(uri);
+			}
+		});
 	});
 
 	let blockSelection = vscode.commands.registerCommand('vscode-zola.blockSelection', () => {
@@ -189,10 +263,30 @@ date=${date}
 		}
 	});
 
+	// Function that subscribes to the onDidChangeActiveTextEditor event
+	let editorChanged = vscode.window.onDidChangeActiveTextEditor((editor) => {
+
+		// Look up the zola preview window (we close over this) and if it is
+		// defined, and the editor is editing a zola markdown file then update
+		// the preview window's uri to point at this file's content
+
+		if (editor !== undefined) {
+			const folderPath = getDocumentWorkspaceFolder();
+			if (folderPath === undefined) {
+				return;
+			}
+			var editorPath = editor.document.fileName;
+			var relativeFileDir = getRelativePathToZolaFile(folderPath, editorPath);
+			var uri = `http://localhost:1111${relativeFileDir}`;
+			zolaPreview.webview.html = getZolaContent(uri);
+		}
+	});
+
 	context.subscriptions.push(pasteSpecial);
 	context.subscriptions.push(previewBlog);
 	context.subscriptions.push(newPost);
 	context.subscriptions.push(blockSelection);
+	context.subscriptions.push(editorChanged);
 }
 
 // this method is called when your extension is deactivated
