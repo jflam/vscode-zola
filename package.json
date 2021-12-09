@@ -29,6 +29,10 @@
 				"title": "Zola: Paste Special"
 			},
 			{
+				"command": "vscode-zola.pasteImage",
+				"title": "Zola: Paste Image"
+			},
+			{
 				"command": "vscode-zola.previewBlog",
 				"title": "Zola: Preview Blog"
 			}

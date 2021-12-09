@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as cp from 'child_process';
 
 // Helper function that extracts the directory name of the file that is open
 // in the currently active editor
@@ -72,6 +73,22 @@ function getTextClipboardData(callback: (text: string) => void) {
 	});
 }
 
+function pad(value: number, pad: number) {
+	let paddedNumber = "000000" + value;
+	return paddedNumber.substr(paddedNumber.length - pad);
+}
+
+function generateFilename() {
+	let now = new Date();
+	let yyyy = pad(now.getFullYear(), 4);
+	let mm = pad(now.getMonth(), 2);
+	let dd = pad(now.getDate(), 2);
+	let h = pad(now.getHours(), 2);
+	let m = pad(now.getMinutes(), 2);
+	let s = pad(now.getSeconds(), 2);
+	return `${yyyy}-${mm}-${dd}-${h}-${m}-${s}.png`;
+}
+
 // The activation function is activated when VS Code opens a workspace that
 // contains a config.toml file in the root directory of the workspace
 export function activate(context: vscode.ExtensionContext) {
@@ -81,6 +98,51 @@ export function activate(context: vscode.ExtensionContext) {
 	let zolaPreview: vscode.WebviewPanel;
 	let zolaOutput: vscode.OutputChannel;
 	let zolaTerminal: vscode.Terminal;
+
+	function logOutput(message: string) {
+		if (zolaOutput === undefined) {
+			zolaOutput = vscode.window.createOutputChannel("zola");
+		}
+		zolaOutput.appendLine(message);
+	}
+
+	let pasteImage = vscode.commands.registerCommand('vscode-zola.pasteImage', () => {
+		var editor = vscode.window.activeTextEditor;
+		if (editor === undefined) {
+			return;
+		}
+		var editorPath = editor.document.fileName;
+		if (editorPath === undefined) {
+			return;
+		}
+		if (path.extname(editorPath) !== ".md") {
+			return;
+		}
+		if (process.platform === 'darwin') {
+			logOutput("Pasting ...");
+			// Paste the image by shelling out to the applescript porgram
+            let scriptPath = path.join(__dirname, '../src/paste_image.applescript');
+			let imageFileName = generateFilename()
+			let imagePath = path.join(path.dirname(editorPath), imageFileName);
+			cp.exec(`osascript ${scriptPath} ${imagePath}`, (error, stdout, stderr) => {
+				if (error !== null && error.message !== null) {
+					logOutput(error.message);
+				} else {
+					const folderPath = getDocumentWorkspaceFolder();
+					if (folderPath !== undefined) {
+						let returnedImagePath = stdout.toString().trim();
+						let containingFolderPath = getRelativePathToZolaFile(folderPath, returnedImagePath);
+						let relativeImagePath = `${containingFolderPath}/${imageFileName}`;
+						logOutput(`Wrote output file to: ${relativeImagePath}`);
+						insertIntoActiveEditor(`![](${relativeImagePath})`);
+					}
+				}
+			});
+		} else {
+			// TODO: implement other platforms
+			return;
+		}
+	});
 
 	// The Paste Special examines URIs on the clipboard and converts matching
 	// URIs into special short codes that can be used to generate special
@@ -288,6 +350,7 @@ date=${date}
 		}
 	});
 
+	context.subscriptions.push(pasteImage);
 	context.subscriptions.push(pasteSpecial);
 	context.subscriptions.push(previewBlog);
 	context.subscriptions.push(newPost);
