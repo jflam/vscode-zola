@@ -89,6 +89,15 @@ function generateFilename() {
 	return `${yyyy}-${mm}-${dd}-${h}-${m}-${s}.png`;
 }
 
+function insertMarkdownImageReference(imagePath: string) {
+	let folderPath = getDocumentWorkspaceFolder();
+	if (folderPath !== undefined) {
+		let containingFolderPath = getRelativePathToZolaFile(folderPath, imagePath);
+		let relativeImagePath = `${containingFolderPath}/${path.basename(imagePath)}`;
+		insertIntoActiveEditor(`![](${relativeImagePath})`);
+	}
+}
+
 // The activation function is activated when VS Code opens a workspace that
 // contains a config.toml file in the root directory of the workspace
 export function activate(context: vscode.ExtensionContext) {
@@ -122,20 +131,15 @@ export function activate(context: vscode.ExtensionContext) {
 			logOutput("Pasting ...");
 			// Paste the image by shelling out to the applescript porgram
             let scriptPath = path.join(__dirname, '../src/paste_image.applescript');
-			let imageFileName = generateFilename()
+			let imageFileName = generateFilename();
 			let imagePath = path.join(path.dirname(editorPath), imageFileName);
 			cp.exec(`osascript ${scriptPath} ${imagePath}`, (error, stdout, stderr) => {
 				if (error !== null && error.message !== null) {
 					logOutput(error.message);
 				} else {
-					const folderPath = getDocumentWorkspaceFolder();
-					if (folderPath !== undefined) {
-						let returnedImagePath = stdout.toString().trim();
-						let containingFolderPath = getRelativePathToZolaFile(folderPath, returnedImagePath);
-						let relativeImagePath = `${containingFolderPath}/${imageFileName}`;
-						logOutput(`Wrote output file to: ${relativeImagePath}`);
-						insertIntoActiveEditor(`![](${relativeImagePath})`);
-					}
+					let returnedImagePath = stdout.toString().trim();
+					insertMarkdownImageReference(returnedImagePath);
+					logOutput(`Wrote output file to: ${returnedImagePath}`);
 				}
 			});
 		} else {
