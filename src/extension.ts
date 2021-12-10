@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import { exec, execSync } from 'child_process';
 
 // Helper function that extracts the directory name of the file that is open
 // in the currently active editor
@@ -58,6 +59,25 @@ function getRelativePathToZolaFile(workspacePath: string, editorPath: string) {
 	var currentFileDir = path.dirname(editorPath);
 	var relativeFileDir = currentFileDir.replace(contentDir, "");
 	return relativeFileDir;
+}
+
+// Return a Windows full path for referencing a path within the current WSL2
+// distribution:
+//
+// WSL2 path: /home/jlam/src/jflam.github.io
+// Windows path: \\wsl.localhost\Ubuntu-20.04\home\jlam\src\jflam.github.io
+// 
+// The current WSL 2 diistribution name is set in $WSL_DISTRO_NAME
+function getWindowsFullPath(path: string): string {
+	let distro = process.env.WSL_DISTRO_NAME;
+	let windowsPath = path.replace(/\//g, '\\');
+	return `\\\\wsl.localhost\\${distro}\\${windowsPath}`;
+}
+
+// Detection function for running under WSL2
+function isWSL2(): boolean {
+	let kernelRelease = execSync("uname -r").toString();
+	return kernelRelease.indexOf("WSL2") > 0;
 }
 
 function getTextClipboardData(callback: (text: string) => void) {
