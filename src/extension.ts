@@ -43,7 +43,7 @@ function getZolaContent(uri: string) {
 	<style>
 		html { width: 100%; height: 100%; min-height: 100%; display: flex; }
 		body { flex: 1; display: flex; }
-		iframe { flex: 1; border: none; background: white; }
+		iframe { flex: 1; border: none; background: black; }
 	</style>
 </head>
 <body>
@@ -235,12 +235,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 	const previewBlog = vscode.commands.registerCommand('vscode-zola.previewBlog', () => {
 
-		// If zolaPreview is defined then exit - the preview window has 
-		// already been created
-		if (zolaPreview !== undefined) {
-			return;
-		}
-
 		// If the current editor is undefined, then exit
 		const currentEditorPath = vscode.window.activeTextEditor?.document.fileName;
 		if (currentEditorPath === undefined) {
@@ -257,16 +251,23 @@ export function activate(context: vscode.ExtensionContext) {
 		// Create all three of these now
 
 		// Create a webview panel to the right of the current editor
-		if (zolaPreview === undefined) {
-			zolaPreview = vscode.window.createWebviewPanel(
-				'vscode-zola.preview',
-				'Zola Preview',
-				vscode.ViewColumn.Beside,
-				{
-					enableScripts: true
-				}
-			);
-		}
+		zolaPreview = vscode.window.createWebviewPanel(
+			'vscode-zola.preview',
+			'Zola Preview',
+			vscode.ViewColumn.Beside,
+			{
+				enableScripts: true
+			}
+		);
+
+		zolaPreview.onDidDispose(
+			() => {
+				// listener
+				zolaOutput.appendLine("CLOSING zola preview panel");
+			},
+			null,
+			context.subscriptions
+		);
 
 		// A good user experience is that if we encounter an error in Zola
 		// during startup that we pop
@@ -359,14 +360,12 @@ date=${date}
 		// defined, and the editor is editing a zola markdown file then update
 		// the preview window's uri to point at this file's content
 
-		if (editor !== undefined) {
-			if (folderPath !== undefined) {
-				var editorPath = editor.document.fileName;
-				var relativeFileDir = getRelativePathToZolaFile(folderPath, editorPath);
-				var uri = `http://localhost:1111${relativeFileDir}`;
-				zolaPreview.webview.html = getZolaContent(uri);
-				zolaOutput.appendLine(`RENDER zola post: ${uri}`);
-			}
+		if (editor !== undefined && folderPath !== undefined && zolaPreview !== undefined) {
+			var editorPath = editor.document.fileName;
+			var relativeFileDir = getRelativePathToZolaFile(folderPath, editorPath);
+			var uri = `http://localhost:1111${relativeFileDir}`;
+			zolaPreview.webview.html = getZolaContent(uri);
+			zolaOutput.appendLine(`RENDER zola post: ${uri}`);
 		}
 	});
 
