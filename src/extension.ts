@@ -189,7 +189,7 @@ export function activate(context: vscode.ExtensionContext) {
 	// The Paste Special examines URIs on the clipboard and converts matching
 	// URIs into special short codes that can be used to generate special
 	// formatting for sites like YouTube and Twitter.
-	const pasteSpecial = vscode.commands.registerCommand('vscode-zola.pasteSpecial', () => {
+	const pasteMediaLink = vscode.commands.registerCommand('vscode-zola.pasteMediaLink', () => {
 		// Regular expressions for extracting IDs out of commonly copied URIs:
 
 		// https://www.youtube.com/watch?v=rgHEmK2mE7Q => rgHEmK2mE7Q  
@@ -371,7 +371,7 @@ date=${date}
 	});
 
 	context.subscriptions.push(pasteImage);
-	context.subscriptions.push(pasteSpecial);
+	context.subscriptions.push(pasteMediaLink);
 	context.subscriptions.push(previewBlog);
 	context.subscriptions.push(newPost);
 	context.subscriptions.push(blockSelection);

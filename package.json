@@ -25,8 +25,8 @@
 				"title": "Zola: Open Today's Post"
 			},
 			{
-				"command": "vscode-zola.pasteSpecial",
-				"title": "Zola: Paste Special"
+				"command": "vscode-zola.pasteMediaLink",
+				"title": "Zola: Paste Media Link"
 			},
 			{
 				"command": "vscode-zola.pasteImage",
