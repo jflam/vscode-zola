@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as cp from 'child_process';
-import { format } from 'path';
 
 // Helper function that extracts the directory name of the file that is open
 // in the currently active editor
@@ -52,7 +51,7 @@ function getZolaContent(uri: string) {
 	<!-- HACK to generate unique HTML each time called ${Math.random()} -->
 </body>
 </html>
-`;
+`.trim();
 }
 
 function getRelativePathToZolaFile(workspacePath: string, editorPath: string) {
@@ -79,18 +78,6 @@ function getWindowsFullPath(path: string): string {
 function isWSL2(): boolean {
 	let kernelRelease = cp.execSync("uname -r").toString();
 	return kernelRelease.indexOf("WSL2") > 0;
-}
-
-function getTextClipboardData(callback: (text: string) => void) {
-
-	// Use the built-in clipboard to read the contents of the clipboard Other
-	// extensions, e.g., vscode-paste-special have a switch that invokes
-	// different system utilities, e.g., winclip.exe or gtkclip, but I wonder
-	// if this is necessary today? I'll need to test to make sure, but it
-	// would be really nice if I could simplify things here.
-	vscode.env.clipboard.readText().then((text) => {
-		callback(text);
-	});
 }
 
 function pad(value: number, pad: number) {
@@ -214,7 +201,7 @@ export function activate(context: vscode.ExtensionContext) {
 		// https://www.instagram.com/p/CW1JQJ1Paul/ => CW1JQJ1Paul
 		const regexpInstagram = /instagram.com\/p\/(.*)\/.*/g;
 
-		getTextClipboardData((text) => {
+		vscode.env.clipboard.readText().then((text) => {
 			// Front-end filter for all URIs before looking for specialized ones
 			const regexpUri = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
 			var m0 = regexpUri.exec(text);
