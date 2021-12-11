@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as cp from 'child_process';
+import { format } from 'path';
 
 // Helper function that extracts the directory name of the file that is open
 // in the currently active editor
@@ -71,7 +72,7 @@ function getRelativePathToZolaFile(workspacePath: string, editorPath: string) {
 function getWindowsFullPath(path: string): string {
 	let distro = process.env.WSL_DISTRO_NAME;
 	let windowsPath = path.replace(/\//g, '\\');
-	return `\\\\wsl.localhost\\${distro}\\${windowsPath}`;
+	return `\\\\wsl.localhost\\${distro}${windowsPath}`;
 }
 
 // Detection function for running under WSL2
@@ -100,7 +101,7 @@ function pad(value: number, pad: number) {
 function generateFilename() {
 	let now = new Date();
 	let yyyy = pad(now.getFullYear(), 4);
-	let mm = pad(now.getMonth(), 2);
+	let mm = pad(now.getMonth() + 1, 2);
 	let dd = pad(now.getDate(), 2);
 	let h = pad(now.getHours(), 2);
 	let m = pad(now.getMinutes(), 2);
@@ -108,30 +109,43 @@ function generateFilename() {
 	return `${yyyy}-${mm}-${dd}-${h}-${m}-${s}.png`;
 }
 
-function insertMarkdownImageReference(imagePath: string) {
-	let folderPath = getDocumentWorkspaceFolder();
-	if (folderPath !== undefined) {
-		let containingFolderPath = getRelativePathToZolaFile(folderPath, imagePath);
-		let relativeImagePath = `${containingFolderPath}/${path.basename(imagePath)}`;
-		insertIntoActiveEditor(`![](${relativeImagePath})`);
-	}
-}
-
 // The activation function is activated when VS Code opens a workspace that
 // contains a config.toml file in the root directory of the workspace
 export function activate(context: vscode.ExtensionContext) {
 	
-	console.log('vscode-zola activated');
+	let zolaOutput = vscode.window.createOutputChannel("zola");
+	zolaOutput.appendLine('ACTIVATING vscode-zola');
 
 	let zolaPreview: vscode.WebviewPanel;
-	let zolaOutput: vscode.OutputChannel;
-	let zolaTerminal: vscode.Terminal;
+	let zolaTerminal = vscode.window.createTerminal(`zola serve`);
+	let userName = cp.execSync("wslvar USERNAME").toString().trim();
+	let folderPath = getDocumentWorkspaceFolder();
 
-	function logOutput(message: string) {
-		if (zolaOutput === undefined) {
-			zolaOutput = vscode.window.createOutputChannel("zola");
+	if (folderPath === undefined) {
+		zolaOutput.appendLine(`ERROR: failed to get the workspace folder`);
+		return null;
+	}
+
+	// Copy helper PowerShell file to Windows if we are running under WSL2
+	if (isWSL2()) {
+		zolaOutput.appendLine("COPYING PowerShell script to Windows");
+		let windowsPasteImagePath = `/mnt/c/Users/${userName}/paste_image.ps1`;
+		let copyCmd = `[ ! -f ${windowsPasteImagePath} ] && cp ${__dirname}/../src/paste_image.ps1 ${windowsPasteImagePath}`;
+		cp.exec(copyCmd, (error, stdout, stderr) => {
+			if (error !== null && error.code !== 1) {
+				zolaOutput.appendLine(`FAILED to copy PowerShell script to Windows, error: ${error.message}`);
+				zolaOutput.appendLine(`FAILED to copy PowerShell script to Windows, command: ${copyCmd}`);
+			}
+		});
+	}
+
+	function insertMarkdownImageReference(imagePath: string) {
+		zolaOutput.appendLine(`INSERT markdown image path: ${imagePath}`);
+		if (folderPath !== undefined) {
+			let containingFolderPath = getRelativePathToZolaFile(folderPath, imagePath).substring(1);
+			let relativeImagePath = `${containingFolderPath}/${path.basename(imagePath)}`;
+			insertIntoActiveEditor(`![](${relativeImagePath})`);
 		}
-		zolaOutput.appendLine(message);
 	}
 
 	let pasteImage = vscode.commands.registerCommand('vscode-zola.pasteImage', () => {
@@ -146,21 +160,39 @@ export function activate(context: vscode.ExtensionContext) {
 		if (path.extname(editorPath) !== ".md") {
 			return;
 		}
+
+		let imageFileName = generateFilename();
+		let imagePath = path.join(path.dirname(editorPath), imageFileName);
+
 		if (process.platform === 'darwin') {
-			logOutput("Pasting ...");
 			// Paste the image by shelling out to the applescript porgram
             let scriptPath = path.join(__dirname, '../src/paste_image.applescript');
-			let imageFileName = generateFilename();
-			let imagePath = path.join(path.dirname(editorPath), imageFileName);
 			cp.exec(`osascript ${scriptPath} ${imagePath}`, (error, stdout, stderr) => {
 				if (error !== null && error.message !== null) {
-					logOutput(error.message);
+					zolaOutput.appendLine(error.message);
 				} else {
 					let returnedImagePath = stdout.toString().trim();
+					zolaOutput.appendLine(returnedImagePath);
 					insertMarkdownImageReference(returnedImagePath);
-					logOutput(`Wrote output file to: ${returnedImagePath}`);
+					zolaOutput.appendLine(`WROTE output file to: ${returnedImagePath}`);
 				}
 			});
+		} else if (process.platform === 'linux') {
+			if (isWSL2()) {
+				// Paste the image by shelling out to powershell on Windows
+				let windowsImagePath = getWindowsFullPath(imagePath);
+				let pasteImageCmd = `powershell.exe "c:\\Users\\${userName}\\paste_image.ps1" "${windowsImagePath}"`.replace(/\\/g, "\\\\");
+				cp.exec(pasteImageCmd, (error, stdout, stderr) => {
+					if (error !== null && error.code !== 0) {
+						zolaOutput.appendLine(`ERROR during pasteImageCmd: ${error.message}`);
+					} else {
+						let returnedImagePath = stdout.toString().trim();
+						insertMarkdownImageReference(imagePath);
+					}
+				});
+			} else {
+				// We are running in real Linux ... need xclip?
+			}
 		} else {
 			// TODO: implement other platforms
 			return;
@@ -233,22 +265,9 @@ export function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 
-		// Retrieve the workspaceFolder which I'm assuming here is the 
-		// directory that contains the zola blog (I could be wrong too ...)
-		const folderPath = getDocumentWorkspaceFolder();
-		if (folderPath === undefined) {
-			return;
-		}
-
 		// The package of zolaOutput, zolaPreview and zolaTerminal are all
 		// together - but keeping guards here for the creation just in case
 		// Create all three of these now
-
-		// I'm not entirely sure we need this window, but keeping this for 
-		// all of our debug output for now
-		if (zolaOutput === undefined) {
-			zolaOutput = vscode.window.createOutputChannel("zola");
-		}
 
 		// Create a webview panel to the right of the current editor
 		if (zolaPreview === undefined) {
@@ -262,11 +281,6 @@ export function activate(context: vscode.ExtensionContext) {
 			);
 		}
 
-		// Output of the zola serve command will go to this window
-		if (zolaTerminal === undefined) {
-			zolaTerminal = vscode.window.createTerminal(`zola serve`);
-		}
-
 		// A good user experience is that if we encounter an error in Zola
 		// during startup that we pop
 
@@ -277,26 +291,25 @@ export function activate(context: vscode.ExtensionContext) {
 
 		// TODO: understand lifetime management for extensions to know when
 		// to output the shutting down zola message
-		zolaOutput.appendLine(`Starting zola in ${folderPath}...`);
-
 		if (folderPath !== undefined) {
+			zolaOutput.appendLine(`STARTING zola serve in ${folderPath}...`);
 			zolaTerminal.sendText(`cd ${folderPath}`);
 			zolaTerminal.sendText(`zola serve`);
+
+			var relativeFileDir = getRelativePathToZolaFile(folderPath, currentEditorPath);
+			var uri = `http://localhost:1111${relativeFileDir}`;
+			zolaPreview.webview.html = getZolaContent(uri);
+			zolaOutput.appendLine(`OPEN zola preview: ${uri}`);
+
+			// Now watch for changes to currentEditorPath and update if that changes
+			// Note the polling interval is 500ms
+			fs.watchFile(currentEditorPath, { interval: 500 }, (curr, prev) => {
+				if (path.extname(currentEditorPath) === ".md") {
+					zolaPreview.webview.html = getZolaContent(uri);
+					zolaOutput.appendLine(`RENDER updated zola post: ${uri}`);
+				}
+			});
 		}
-
-		var relativeFileDir = getRelativePathToZolaFile(folderPath, currentEditorPath);
-		var uri = `http://localhost:1111${relativeFileDir}`;
-		zolaPreview.webview.html = getZolaContent(uri);
-		zolaOutput.appendLine(`Open zola preview: ${uri}`);
-
-		// Now watch for changes to currentEditorPath and update if that changes
-		// Note the polling interval is 500ms
-		fs.watchFile(currentEditorPath, { interval: 500 }, (curr, prev) => {
-			if (path.extname(currentEditorPath) === ".md") {
-				zolaPreview.webview.html = getZolaContent(uri);
-				zolaOutput.appendLine(`Re-render zola post: ${uri}`);
-			}
-		});
 	});
 
 	let blockSelection = vscode.commands.registerCommand('vscode-zola.blockSelection', () => {
@@ -369,7 +382,7 @@ date=${date}
 			var relativeFileDir = getRelativePathToZolaFile(folderPath, editorPath);
 			var uri = `http://localhost:1111${relativeFileDir}`;
 			zolaPreview.webview.html = getZolaContent(uri);
-			zolaOutput.appendLine(`Editor changed to: ${uri}`);
+			zolaOutput.appendLine(`RENDER zola post: ${uri}`);
 		}
 	});
 
@@ -379,6 +392,8 @@ date=${date}
 	context.subscriptions.push(newPost);
 	context.subscriptions.push(blockSelection);
 	context.subscriptions.push(editorChanged);
+
+	zolaOutput.appendLine("ACTIVATED vscode-zola");
 }
 
 // this method is called when your extension is deactivated
