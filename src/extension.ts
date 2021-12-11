@@ -82,7 +82,7 @@ function isWSL2(): boolean {
 
 function pad(value: number, pad: number) {
 	let paddedNumber = "000000" + value;
-	return paddedNumber.substr(paddedNumber.length - pad);
+	return paddedNumber.substring(paddedNumber.length - pad);
 }
 
 function generateFilename() {
