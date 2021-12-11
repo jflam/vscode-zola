@@ -2,8 +2,21 @@
   "name": "vscode-zola",
 	"displayName": "vscode-zola",
 	"description": "VS Code extensions for writing a blog using zola",
-	"version": "0.0.1",
-	"repository": { "url": "https://github.com/jflam/vscode-zola" },
+	"version": "0.0.2",
+	"author": { 
+		"name": "John Lam",
+		"email": "jlam@iunknown.com"
+	},
+	"license": "SEE LICENSE IN LICENSE",
+	"bugs": {
+		"url": "https://github.com/jflam/vscode-zola/issues",
+		"email": "jlam@iunknown.com"
+	},
+	"repository": { 
+		"type": "git",
+		"url": "https://github.com/jflam/vscode-zola" 
+	},
+	"homepage": "https://github.com/jflam/vscode-zola/README.md",
 	"engines": {
 		"vscode": "^1.62.0"
 	},
