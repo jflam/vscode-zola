@@ -343,9 +343,8 @@ export function activate(context: vscode.ExtensionContext) {
 		const localDate = new Date(currentDate.getTime() - (offset * 60 * 1000));
 		const date = localDate.toISOString().split('T')[0];
 
-		const blogDir = vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath)[0];
-		if (blogDir) {
-			const newDir = `${blogDir}/content/${date}`;
+		if (folderPath) {
+			const newDir = `${folderPath}/content/${date}`;
 			const newFile = `${newDir}/index.md`;
 			if (!fs.existsSync(newDir)) {
 				fs.mkdirSync(newDir);
@@ -356,7 +355,7 @@ export function activate(context: vscode.ExtensionContext) {
 title="${date}"
 date=${date}
 +++
-`);
+`.trim());
 			}
 
 			// Open the index.md file (newFile) in editor
