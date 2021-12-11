@@ -148,7 +148,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	}
 
-	let pasteImage = vscode.commands.registerCommand('vscode-zola.pasteImage', () => {
+	const pasteImage = vscode.commands.registerCommand('vscode-zola.pasteImage', () => {
 		var editor = vscode.window.activeTextEditor;
 		if (editor === undefined) {
 			return;
@@ -202,7 +202,7 @@ export function activate(context: vscode.ExtensionContext) {
 	// The Paste Special examines URIs on the clipboard and converts matching
 	// URIs into special short codes that can be used to generate special
 	// formatting for sites like YouTube and Twitter.
-	let pasteSpecial = vscode.commands.registerCommand('vscode-zola.pasteSpecial', () => {
+	const pasteSpecial = vscode.commands.registerCommand('vscode-zola.pasteSpecial', () => {
 		// Regular expressions for extracting IDs out of commonly copied URIs:
 
 		// https://www.youtube.com/watch?v=rgHEmK2mE7Q => rgHEmK2mE7Q  
@@ -246,7 +246,7 @@ export function activate(context: vscode.ExtensionContext) {
 		});
 	});
 
-	let previewBlog = vscode.commands.registerCommand('vscode-zola.previewBlog', () => {
+	const previewBlog = vscode.commands.registerCommand('vscode-zola.previewBlog', () => {
 
 		// If zolaPreview is defined then exit - the preview window has 
 		// already been created
@@ -312,7 +312,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	let blockSelection = vscode.commands.registerCommand('vscode-zola.blockSelection', () => {
+	const blockSelection = vscode.commands.registerCommand('vscode-zola.blockSelection', () => {
 		const editor = vscode.window.activeTextEditor;
 		if (editor) {
 			const doc = editor.document;
@@ -337,7 +337,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Create a new blog post by taking today's date and creating a new 
 	// directory content/yyyy-mm-dd/ and a new file index.md in that directory
-	let newPost = vscode.commands.registerCommand('vscode-zola.openTodayPost', async () => {
+	const newPost = vscode.commands.registerCommand('vscode-zola.openTodayPost', async () => {
 		const currentDate = new Date();
 		const offset = currentDate.getTimezoneOffset();
 		const localDate = new Date(currentDate.getTime() - (offset * 60 * 1000));
@@ -367,7 +367,7 @@ date=${date}
 	});
 
 	// Function that subscribes to the onDidChangeActiveTextEditor event
-	let editorChanged = vscode.window.onDidChangeActiveTextEditor((editor) => {
+	const editorChanged = vscode.window.onDidChangeActiveTextEditor((editor) => {
 
 		// Look up the zola preview window (we close over this) and if it is
 		// defined, and the editor is editing a zola markdown file then update
