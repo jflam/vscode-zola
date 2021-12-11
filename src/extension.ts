@@ -343,7 +343,7 @@ export function activate(context: vscode.ExtensionContext) {
 		const localDate = new Date(currentDate.getTime() - (offset * 60 * 1000));
 		const date = localDate.toISOString().split('T')[0];
 
-		if (folderPath) {
+		if (folderPath !== undefined) {
 			const newDir = `${folderPath}/content/${date}`;
 			const newFile = `${newDir}/index.md`;
 			if (!fs.existsSync(newDir)) {
@@ -373,15 +373,13 @@ date=${date}
 		// the preview window's uri to point at this file's content
 
 		if (editor !== undefined) {
-			const folderPath = getDocumentWorkspaceFolder();
-			if (folderPath === undefined) {
-				return;
+			if (folderPath !== undefined) {
+				var editorPath = editor.document.fileName;
+				var relativeFileDir = getRelativePathToZolaFile(folderPath, editorPath);
+				var uri = `http://localhost:1111${relativeFileDir}`;
+				zolaPreview.webview.html = getZolaContent(uri);
+				zolaOutput.appendLine(`RENDER zola post: ${uri}`);
 			}
-			var editorPath = editor.document.fileName;
-			var relativeFileDir = getRelativePathToZolaFile(folderPath, editorPath);
-			var uri = `http://localhost:1111${relativeFileDir}`;
-			zolaPreview.webview.html = getZolaContent(uri);
-			zolaOutput.appendLine(`RENDER zola post: ${uri}`);
 		}
 	});
 
