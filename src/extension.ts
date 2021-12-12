@@ -105,7 +105,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	let zolaPreview: vscode.WebviewPanel;
 	let zolaTerminal = vscode.window.createTerminal(`zola serve`);
-	let userName = cp.execSync("wslvar USERNAME").toString().trim();
+	let userName = "";
 	let folderPath = getDocumentWorkspaceFolder();
 
 	if (folderPath === undefined) {
@@ -124,6 +124,7 @@ export function activate(context: vscode.ExtensionContext) {
 				zolaOutput.appendLine(`FAILED to copy PowerShell script to Windows, command: ${copyCmd}`);
 			}
 		});
+		userName = cp.execSync("wslvar USERNAME").toString().trim();
 	}
 
 	function insertMarkdownImageReference(imagePath: string) {
