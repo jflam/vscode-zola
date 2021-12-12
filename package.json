@@ -1,7 +1,7 @@
 {
   "name": "vscode-zola",
-	"displayName": "vscode-zola",
-	"description": "VS Code extensions for writing a blog using zola",
+	"displayName": "Zola",
+	"description": "A better blog writing experience in VS Code using zola",
 	"version": "0.0.2",
 	"author": { 
 		"name": "John Lam",
