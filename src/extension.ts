@@ -301,29 +301,6 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	const blockSelection = vscode.commands.registerCommand('vscode-zola.blockSelection', () => {
-		const editor = vscode.window.activeTextEditor;
-		if (editor) {
-			const doc = editor.document;
-			editor.edit(editBuilder => {
-				if (editor.selection.isEmpty) {
-					// TODO: figure out how to place cursor between the blocks inserted
-					editBuilder.insert(editor.selection.active, `
-{% block() %}
-
-{% end %}
-					`);
-				} else {
-					editor.selections.forEach(sel => {
-						const range = sel.isEmpty ? doc.getWordRangeAtPosition(sel.start) || sel : sel;
-						editBuilder.insert(sel.start, "{% block() %}\n");
-						editBuilder.insert(sel.end, "\n{% end %}");
-					});
-				}
-			});
-		}
-	});
-
 	// Create a new blog post by taking today's date and creating a new 
 	// directory content/yyyy-mm-dd/ and a new file index.md in that directory
 	const newPost = vscode.commands.registerCommand('vscode-zola.openTodayPost', async () => {
@@ -374,7 +351,6 @@ date=${date}
 	context.subscriptions.push(pasteMediaLink);
 	context.subscriptions.push(previewBlog);
 	context.subscriptions.push(newPost);
-	context.subscriptions.push(blockSelection);
 	context.subscriptions.push(editorChanged);
 
 	zolaOutput.appendLine("ACTIVATED vscode-zola");

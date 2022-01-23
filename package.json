@@ -2,7 +2,7 @@
   "name": "vscode-zola",
 	"displayName": "Zola",
 	"description": "A better blog writing experience in VS Code using zola",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"author": { 
 		"name": "John Lam",
 		"email": "jlam@iunknown.com"
@@ -29,10 +29,6 @@
 	"main": "./out/extension.js",
 	"contributes": {
 		"commands": [
-			{
-				"command": "vscode-zola.blockSelection",
-				"title": "Zola: Block Selection"
-			},
 			{
 				"command": "vscode-zola.openTodayPost",
 				"title": "Zola: Open Today's Post"
